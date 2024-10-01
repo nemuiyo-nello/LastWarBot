@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import asyncio
 import os
 
@@ -19,35 +19,29 @@ class MyView(discord.ui.View):
         # 通知を送るチャンネルIDで指定
         channel = bot.get_channel(self.notify_channel_id)
 
-        # すぐに応答する
-        await interaction.response.send_message("メッセージをお知らせチャンネルに送信します！", ephemeral=True)
-
         if channel is not None:
             # サーバーニックネームを取得
             user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
-            
-            # メッセージを送信
             message = await channel.send(f"@everyone\n掘るちゃむ！\nby {user_nick}")  # ユーザーのニックネームをメッセージに追加
 
             # 5分後にメッセージを削除
             await asyncio.sleep(300)  # 300秒（5分）待機
-            
-            try:
-                await message.delete()  # メッセージを削除
-                # print(f'Message deleted: {message.id}')  # 削除成功のログ（必要に応じてコメントアウト）
-            except discord.Forbidden:
-                # print(f'Cannot delete message: {message.id} - Forbidden')  # 権限エラー（必要に応じてコメントアウト）
-                pass
-            except discord.HTTPException as e:
-                # print(f'Failed to delete message: {message.id} - {e}')  # 削除失敗のログ（必要に応じてコメントアウト）
-                pass
+            await message.delete()  # メッセージを削除
         else:
-            print("指定したチャンネルが見つかりませんでした。")
+            await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
+
+# 定期的にメッセージを送信するタスク
+@tasks.loop(minutes=10)  # 10分ごとに実行
+async def send_ping():
+    channel = bot.get_channel(1290535817563082863)  # 適切なチャンネルIDに変更
+    if channel is not None:
+        await channel.send("ボットは元気です！")
 
 # ボットが起動したときに自動的にボタンを表示する処理
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user.name}')
+    send_ping.start()  # タスクを開始
 
     # ボタンを設置するチャンネルID
     button_channel_id = 1290535817563082863  # ボタンを設置したいチャンネルのID
@@ -57,8 +51,8 @@ async def on_ready():
     # ボタンを設置するチャンネルを取得
     button_channel = bot.get_channel(button_channel_id)
     if button_channel is not None:
-        # 以前のメッセージを削除する
-        async for message in button_channel.history(limit=100):
+        # 指定したチャンネルのメッセージを削除
+        async for message in button_channel.history(limit=100):  # 最後の100件のメッセージを削除
             await message.delete()
         
         view = MyView(notify_channel_id)  # 通知チャンネルのIDをビューに渡す
