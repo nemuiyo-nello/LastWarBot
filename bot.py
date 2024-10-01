@@ -24,6 +24,9 @@ class MyView(discord.ui.View):
             # サーバーニックネームを取得
             user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
             message = await channel.send(f"@everyone\n掘るちゃむ！\nby {user_nick}")  # ユーザーのニックネームをメッセージに追加
+            
+            # ユーザーに応答
+            await interaction.response.send_message("メッセージをお知らせチャンネルに送信しました！", ephemeral=True)  # ユーザーに応答
 
             # 5分後にメッセージを削除
             await asyncio.sleep(300)  # 300秒（5分）待機
