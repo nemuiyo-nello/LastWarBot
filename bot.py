@@ -2,12 +2,10 @@ import discord
 from discord.ext import commands
 import asyncio
 import os
-from threading import Thread
 
 # ボットの初期化
 intents = discord.Intents.default()
 intents.message_content = True  # メッセージコンテンツのインテントを有効にする
-intents.dm_messages = True  # DMメッセージのインテントを有効にする
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ボタンの作成
@@ -24,14 +22,12 @@ class MyView(discord.ui.View):
         if channel is not None:
             # サーバーニックネームを取得
             user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
-            message = await channel.send(f"@everyone\n掘るちゃむ！\nby {user_nick}")  # ユーザーのニックネームをメッセージに追加
+            await channel.send(f"@everyone\n掘るちゃむ！\nby {user_nick}")  # ユーザーのニックネームをメッセージに追加
 
             # 5分後にメッセージを削除
             await asyncio.sleep(300)  # 300秒（5分）待機
+            message = await channel.send(f"@everyone\n掘るちゃむ！\nby {user_nick}")
             await message.delete()  # メッセージを削除
-
-            # DMで確認メッセージを送信
-            await interaction.user.send("メッセージをお知らせチャンネルに送信しました！")  # DMで確認メッセージを送信
         else:
             await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
 
