@@ -31,6 +31,17 @@ class MyView(discord.ui.View):
         else:
             await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
 
+# 定期的なPingメッセージを送信するタスク
+@tasks.loop(seconds=600)  # 10分ごと
+async def send_ping():
+    ping_channel_id = 1284553911583113290  # Pingを送りたいチャンネルのID
+    ping_channel = bot.get_channel(ping_channel_id)
+    
+    if ping_channel is not None:
+        ping_message = await ping_channel.send("Ping!")
+        await asyncio.sleep(1)  # 短時間待機
+        await ping_message.delete()  # 送信したメッセージを削除
+
 # ボットが起動したときに自動的にボタンを表示する処理
 @bot.event
 async def on_ready():
@@ -51,22 +62,12 @@ async def on_ready():
         view = MyView(notify_channel_id)  # 通知チャンネルのIDをビューに渡す
         await button_channel.send("## 掘るちゃむをお知らせする", view=view)
 
+        # Ping送信タスクを開始
+        send_ping.start()
     else:
         print("指定したボタン設置用のチャンネルが見つかりませんでした。")
-
-# 定期的なPingメッセージを送信するタスク
-@tasks.loop(seconds=600)  # 10分ごと
-async def send_ping():
-    ping_channel_id = 1284553911583113290  # Pingを送りたいチャンネルのID
-    ping_channel = bot.get_channel(ping_channel_id)
-    
-    if ping_channel is not None:
-        ping_message = await ping_channel.send("Ping!")
-        await asyncio.sleep(1)  # 短時間待機
-        await ping_message.delete()  # 送信したメッセージを削除
 
 # ボットを起動
 if __name__ == "__main__":
     token = os.getenv('DISCORD_TOKEN')  # 環境変数からボットのトークンを取得
-    send_ping.start()  # Ping送信タスクを開始
     bot.run(token)
