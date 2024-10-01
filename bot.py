@@ -6,6 +6,7 @@ import os
 # ボットの初期化
 intents = discord.Intents.default()
 intents.message_content = True  # メッセージコンテンツのインテントを有効にする
+intents.messages = True  # メッセージのインテントを有効にする（削除用）
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ボタンの作成
@@ -44,8 +45,12 @@ async def on_ready():
     # ボタンを設置するチャンネルを取得
     button_channel = bot.get_channel(button_channel_id)
     if button_channel is not None:
+        # チャンネル内の全メッセージを削除
+        async for message in button_channel.history(limit=None):
+            await message.delete()
+        
         view = MyView(notify_channel_id)  # 通知チャンネルのIDをビューに渡す
-        asyncio.create_task(button_channel.send("## 掘るちゃむをお知らせする", view=view))
+        await button_channel.send("## 掘るちゃむをお知らせする", view=view)
     else:
         print("指定したボタン設置用のチャンネルが見つかりませんでした。")
 
