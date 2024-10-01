@@ -20,7 +20,7 @@ class MyView(discord.ui.View):
         channel = bot.get_channel(self.notify_channel_id)
 
         # すぐに応答する
-        await interaction.response.send_message("メッセージをお知らせチャンネルに送信します！", ephemeral=True)
+        await interaction.response.send_message("メッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
 
         if channel is not None:
             # サーバーニックネームを取得
