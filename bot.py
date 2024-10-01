@@ -19,6 +19,9 @@ class MyView(discord.ui.View):
         # 通知を送るチャンネルIDで指定
         channel = bot.get_channel(self.notify_channel_id)
 
+        # すぐに応答する
+        await interaction.response.send_message("メッセージをお知らせチャンネルに送信します！", ephemeral=True)
+
         if channel is not None:
             # サーバーニックネームを取得
             user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
@@ -31,16 +34,15 @@ class MyView(discord.ui.View):
             
             try:
                 await message.delete()  # メッセージを削除
-                print(f'Message deleted: {message.id}')  # 削除成功のログ
+                # print(f'Message deleted: {message.id}')  # 削除成功のログ（必要に応じてコメントアウト）
             except discord.Forbidden:
-                print(f'Cannot delete message: {message.id} - Forbidden')  # 権限エラー
+                # print(f'Cannot delete message: {message.id} - Forbidden')  # 権限エラー（必要に応じてコメントアウト）
+                pass
             except discord.HTTPException as e:
-                print(f'Failed to delete message: {message.id} - {e}')  # 削除失敗のログ
-
-            # インタラクションに対する応答
-            await interaction.response.send_message("メッセージをお知らせチャンネルに送信しました！", ephemeral=True)  # ユーザーに応答
+                # print(f'Failed to delete message: {message.id} - {e}')  # 削除失敗のログ（必要に応じてコメントアウト）
+                pass
         else:
-            await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
+            print("指定したチャンネルが見つかりませんでした。")
 
 # ボットが起動したときに自動的にボタンを表示する処理
 @bot.event
@@ -65,6 +67,4 @@ async def on_ready():
         print("指定したボタン設置用のチャンネルが見つかりませんでした。")
 
 # ボットを起動
-if __name__ == "__main__":
-    token = os.getenv('DISCORD_TOKEN')  # 環境変数からボットのトークンを取得
-    bot.run(token)
+if __
