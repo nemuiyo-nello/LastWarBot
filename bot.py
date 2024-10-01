@@ -67,4 +67,6 @@ async def on_ready():
         print("指定したボタン設置用のチャンネルが見つかりませんでした。")
 
 # ボットを起動
-if __
+if __name__ == "__main__":
+    token = os.getenv('DISCORD_TOKEN')  # 環境変数からボットのトークンを取得
+    bot.run(token)
