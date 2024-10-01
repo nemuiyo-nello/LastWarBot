@@ -1,42 +1,41 @@
-import discord
-from discord.ext import commands
-from discord.ui import Button, View
 import os
-import asyncio
+import discord
+from discord.ext import commands, tasks
+from discord.ui import Button, View
 
+# 環境変数からトークンを取得
+TOKEN = os.getenv('DISCORD_TOKEN')
+
+# botのプレフィックスを設定
 intents = discord.Intents.default()
-intents.messages = True
-
-bot = commands.Bot(command_prefix='!', intents=intents)
-
-# チャンネルIDの設定
-button_channel_id = 1290535817563082863  # ボタンを設置するチャンネル
-notify_channel_id = 1284553911583113290  # 通知を送りたいチャンネル
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ボタンのコールバック
-class MyView(View):
-    @discord.ui.button(label='🚀 ちゃむる！', style=discord.ButtonStyle.success)
-    async def button_callback(self, button: Button, interaction: discord.Interaction):
+async def button_callback(interaction: discord.Interaction):
+    channel = bot.get_channel(1290535817563082863)  # ボタン設置チャンネル
+    if channel:
+        user_nick = interaction.user.display_name
+        message = await channel.send(f"@everyone\n掘るちゃむ！\nby {user_nick}")
+        await message.delete()  # メッセージを削除
         await interaction.response.send_message("メッセージをお知らせチャンネルに送信しました！", ephemeral=True)  # ユーザーに応答
-        notify_channel = bot.get_channel(notify_channel_id)
-        await notify_channel.send(f"@everyone\n掘るちゃむ！\nby {interaction.user.nick}")
-        await asyncio.sleep(300)  # 5分待機
-        # ここで必要に応じてメッセージを削除するコードを追加できます
+    else:
+        await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
 
+# ボタンを作成するコマンド
+@bot.command()
+async def create_button(ctx):
+    button = Button(style=discord.ButtonStyle.success, label='🚀 ちゃむる！')
+    button.callback = button_callback
+
+    view = View()
+    view.add_item(button)
+
+    await ctx.send("## 掘るちゃむをお知らせする", view=view)
+
+# Botの起動時に実行されるイベント
 @bot.event
 async def on_ready():
-    print(f'Logged in as {bot.user} (ID: {bot.user.id})')
-    print('------')
+    print(f'{bot.user} has connected to Discord!')
 
-    channel = bot.get_channel(button_channel_id)
-    if channel:
-        # チャンネル内のメッセージを削除
-        async for message in channel.history(limit=100):
-            await message.delete()
-        # ボタンを設置
-        view = MyView()
-        await channel.send("ボタンを押してください！", view=view)
-
-# Botのトークンを環境変数から取得
-TOKEN = os.getenv('DISCORD_TOKEN')
+# Botの実行
 bot.run(TOKEN)
