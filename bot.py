@@ -1,76 +1,42 @@
 import discord
-from discord.ext import commands, tasks
-import asyncio
+from discord.ext import commands
+from discord.ui import Button, View
 import os
+import asyncio
 
-# ボットの初期化
 intents = discord.Intents.default()
-intents.message_content = True  # メッセージコンテンツのインテントを有効にする
-intents.dm_messages = True  # DMメッセージのインテントを有効にする
-bot = commands.Bot(command_prefix="!", intents=intents)
+intents.messages = True
 
-# ボタンの作成
-class MyView(discord.ui.View):
-    def __init__(self, notify_channel_id):
-        super().__init__()
-        self.notify_channel_id = notify_channel_id  # 通知を送るチャンネルのIDを保存
+bot = commands.Bot(command_prefix='!', intents=intents)
 
-    @discord.ui.button(label="🚀 ちゃむる！", style=discord.ButtonStyle.success)
-    async def button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # 通知を送るチャンネルIDで指定
-        channel = bot.get_channel(self.notify_channel_id)
+# チャンネルIDの設定
+button_channel_id = 1290535817563082863  # ボタンを設置するチャンネル
+notify_channel_id = 1284553911583113290  # 通知を送りたいチャンネル
 
-        if channel is not None:
-            # サーバーニックネームを取得
-            user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
-            message = await channel.send(f"@everyone\n掘るちゃむ！\nby {user_nick}")  # ユーザーのニックネームをメッセージに追加
-            
-            # ユーザーに応答
-            await interaction.response.send_message("メッセージをお知らせチャンネルに送信しました！", ephemeral=True)  # ユーザーに応答
+# ボタンのコールバック
+class MyView(View):
+    @discord.ui.button(label='🚀 ちゃむる！', style=discord.ButtonStyle.success)
+    async def button_callback(self, button: Button, interaction: discord.Interaction):
+        await interaction.response.send_message("メッセージをお知らせチャンネルに送信しました！", ephemeral=True)  # ユーザーに応答
+        notify_channel = bot.get_channel(notify_channel_id)
+        await notify_channel.send(f"@everyone\n掘るちゃむ！\nby {interaction.user.nick}")
+        await asyncio.sleep(300)  # 5分待機
+        # ここで必要に応じてメッセージを削除するコードを追加できます
 
-            # 5分後にメッセージを削除
-            await asyncio.sleep(300)  # 300秒（5分）待機
-            await message.delete()  # メッセージを削除
-        else:
-            await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
-
-# 定期的なPingメッセージを送信するタスク
-@tasks.loop(seconds=600)  # 10分ごと
-async def send_ping():
-    ping_channel_id = 1284553911583113290  # Pingを送りたいチャンネルのID
-    ping_channel = bot.get_channel(ping_channel_id)
-    
-    if ping_channel is not None:
-        ping_message = await ping_channel.send("Ping!")
-        await asyncio.sleep(1)  # 短時間待機
-        await ping_message.delete()  # 送信したメッセージを削除
-
-# ボットが起動したときに自動的にボタンを表示する処理
 @bot.event
 async def on_ready():
-    print("お知らせちゃんだよ～❤")  # メッセージ変更
+    print(f'Logged in as {bot.user} (ID: {bot.user.id})')
+    print('------')
 
-    # ボタンを設置するチャンネルID
-    button_channel_id = 1290535817563082863  # ボタンを設置したいチャンネルのID
-    # 通知を送るチャンネルID
-    notify_channel_id = 1284553911583113290  # 通知を送りたいチャンネルのID
-
-    # ボタンを設置するチャンネルを取得
-    button_channel = bot.get_channel(button_channel_id)
-    if button_channel is not None:
-        # ボタンを設置する前に、チャンネルの全メッセージを削除
-        async for message in button_channel.history(limit=None):
+    channel = bot.get_channel(button_channel_id)
+    if channel:
+        # チャンネル内のメッセージを削除
+        async for message in channel.history(limit=100):
             await message.delete()
+        # ボタンを設置
+        view = MyView()
+        await channel.send("ボタンを押してください！", view=view)
 
-        view = MyView(notify_channel_id)  # 通知チャンネルのIDをビューに渡す
-        await button_channel.send("## 掘るちゃむをお知らせする", view=view)
-
-        # Ping送信タスクを開始
-        send_ping.start()
-    else:
-        print("指定したボタン設置用のチャンネルが見つかりませんでした。")
-
-# ボットを起動
-if __name__ == "__main__":
-    token = os.getenv('DISCORD_TOKEN')  # 環境変数からボットのトークンを取得
-    bot.run(token)
+# Botのトークンを環境変数から取得
+TOKEN = os.getenv('DISCORD_TOKEN')
+bot.run(TOKEN)
