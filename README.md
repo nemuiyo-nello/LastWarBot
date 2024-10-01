@@ -1,0 +1,2 @@
+# LastWarBot
+ラストウォーのDiscord Bot
