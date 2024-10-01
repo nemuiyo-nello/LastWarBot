@@ -36,6 +36,9 @@ class MyView(discord.ui.View):
                 print(f'Cannot delete message: {message.id} - Forbidden')  # 権限エラー
             except discord.HTTPException as e:
                 print(f'Failed to delete message: {message.id} - {e}')  # 削除失敗のログ
+
+            # インタラクションに対する応答
+            await interaction.response.send_message("メッセージをお知らせチャンネルに送信しました！", ephemeral=True)  # ユーザーに応答
         else:
             await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
 
