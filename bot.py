@@ -14,8 +14,9 @@ class MyView(discord.ui.View):
         super().__init__(timeout=None)  # timeoutをNoneに設定して無効化
         self.notify_channel_id = notify_channel_id  # 通知を送るチャンネルのIDを保存
 
+    # 「🚀 ちゃむる！」ボタン
     @discord.ui.button(label="🚀 ちゃむる！", style=discord.ButtonStyle.success)
-    async def button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def chamuru_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         # 通知を送るチャンネルIDで指定
         channel = bot.get_channel(self.notify_channel_id)
 
@@ -31,6 +32,34 @@ class MyView(discord.ui.View):
 
             # 5分後にメッセージを削除
             await asyncio.sleep(300)  # 300秒（5分）待機
+            
+            try:
+                await message.delete()  # メッセージを削除
+            except discord.Forbidden:
+                pass
+            except discord.HTTPException as e:
+                pass
+        else:
+            print("指定したチャンネルが見つかりませんでした。")
+
+    # 新しい「⚔ 占拠中！」ボタン
+    @discord.ui.button(label="⚔ 占拠中！", style=discord.ButtonStyle.primary)  # スタイルを primary に変更
+    async def senkyo_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # 通知を送るチャンネルIDで指定
+        channel = bot.get_channel(self.notify_channel_id)
+
+        # すぐに応答する
+        await interaction.response.send_message("占拠中のメッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
+
+        if channel is not None:
+            # サーバーニックネームを取得
+            user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
+
+            # メッセージを送信
+            message = await channel.send(f"@everyone\n都市or拠点占拠中！\nby {user_nick}")  # ユーザーのニックネームをメッセージに追加
+
+            # 10分後にメッセージを削除
+            await asyncio.sleep(600)  # 600秒（10分）待機
             
             try:
                 await message.delete()  # メッセージを削除
