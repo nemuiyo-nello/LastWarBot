@@ -33,6 +33,24 @@ async def save_notify_channel(pool, guild_id, notify_channel_id):
             SET notify_channel_id = $2
         """, guild_id, notify_channel_id)
 
+# サーバーごとの設定をクリアする関数（ボタンチャンネルID）
+async def clear_button_channel(pool, guild_id):
+    async with pool.acquire() as connection:
+        await connection.execute("""
+            UPDATE server_config
+            SET button_channel_id = NULL
+            WHERE guild_id = $1
+        """, guild_id)
+
+# サーバーごとの設定をクリアする関数（通知チャンネルID）
+async def clear_notify_channel(pool, guild_id):
+    async with pool.acquire() as connection:
+        await connection.execute("""
+            UPDATE server_config
+            SET notify_channel_id = NULL
+            WHERE guild_id = $1
+        """, guild_id)
+
 # サーバーごとの設定を読み込む関数
 async def load_config(pool, guild_id):
     async with pool.acquire() as connection:
@@ -42,7 +60,7 @@ async def load_config(pool, guild_id):
 class MyView(discord.ui.View):
     def __init__(self, notify_channel_id):
         super().__init__(timeout=None)  # timeoutをNoneに設定して無効化
-        self.notify_channel_id = notify_channel_id  # 通知を送るチャンネルのIDを保存
+        self.notify_channel_id = notify_channel_id  # 通知チャンネルのIDを保存
 
     # 「🚀 ちゃむる！」ボタン
     @discord.ui.button(label="🚀 ちゃむる！", style=discord.ButtonStyle.success)
@@ -151,6 +169,20 @@ async def sn(ctx):
     notify_channel_id = ctx.channel.id  # コマンドが実行されたチャンネルのIDを取得
     await save_notify_channel(bot.db_pool, ctx.guild.id, notify_channel_id)
     await ctx.send(f"通知チャンネルを設定したよ！")
+
+# 通知チャンネルIDをクリアするコマンド
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def cn(ctx):
+    await clear_notify_channel(bot.db_pool, ctx.guild.id)
+    await ctx.send("通知チャンネルIDをクリアしました。")
+
+# ボタンチャンネルIDをクリアするコマンド
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def cb(ctx):
+    await clear_button_channel(bot.db_pool, ctx.guild.id)
+    await ctx.send("ボタンチャンネルIDをクリアしました。")
 
 # ボットを起動
 if __name__ == "__main__":
