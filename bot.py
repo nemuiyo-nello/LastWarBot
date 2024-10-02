@@ -3,15 +3,26 @@ from discord.ext import commands
 import asyncio
 import os
 import asyncpg
+import logging
+
+# ログの設定
+logging.basicConfig(level=logging.INFO)
 
 # ボットの初期化
 intents = discord.Intents.default()
 intents.message_content = True  # メッセージコンテンツのインテントを有効にする
-bot = commands.Bot(command_prefix="!", intents=intents)
+command_prefix = os.getenv('COMMAND_PREFIX', '!')  # 環境変数からコマンドプレフィックスを取得、デフォルトは'!'
+bot = commands.Bot(command_prefix=command_prefix, intents=intents)
 
 # データベースに接続する関数
 async def init_db():
-    return await asyncpg.create_pool(dsn=os.getenv('DATABASE_URL'))
+    try:
+        pool = await asyncpg.create_pool(dsn=os.getenv('DATABASE_URL'))
+        logging.info("データベース接続成功")
+        return pool
+    except Exception as e:
+        logging.error(f"データベース接続エラー: {e}")
+        return None
 
 # サーバーごとの設定を保存する関数（ボタンチャンネルID）
 async def save_button_channel(pool, guild_id, button_channel_id):
@@ -61,9 +72,9 @@ class MyView(discord.ui.View):
             except discord.Forbidden:
                 pass
             except discord.HTTPException as e:
-                pass
+                logging.error(f"メッセージ削除エラー: {e}")
         else:
-            print("指定したチャンネルが見つかりませんでした。")
+            logging.warning("指定したチャンネルが見つかりませんでした。")
 
     # 「⚔ 占拠中！」ボタン
     @discord.ui.button(label="⚔ 占拠中！", style=discord.ButtonStyle.primary)
@@ -82,17 +93,20 @@ class MyView(discord.ui.View):
             except discord.Forbidden:
                 pass
             except discord.HTTPException as e:
-                pass
+                logging.error(f"メッセージ削除エラー: {e}")
         else:
-            print("指定したチャンネルが見つかりませんでした。")
+            logging.warning("指定したチャンネルが見つかりませんでした。")
 
 # ボットが起動したときに自動的にボタンを表示する処理
 @bot.event
 async def on_ready():
-    print(f'Logged in as {bot.user.name}')
+    logging.info(f'Logged in as {bot.user.name}')
     
     # データベースに接続
     bot.db_pool = await init_db()
+    if bot.db_pool is None:
+        logging.error("データベースに接続できませんでした。ボタン表示はスキップします。")
+        return
 
     # すべてのギルド（サーバー）ごとにボタンを表示
     for guild in bot.guilds:
@@ -111,9 +125,9 @@ async def on_ready():
                 view = MyView(notify_channel_id)  # 通知チャンネルのIDをビューに渡す
                 await button_channel.send("## 掘るちゃむをお知らせする", view=view)
             else:
-                print(f"サーバー {guild.name} のボタン設置用チャンネルが見つかりませんでした。")
+                logging.warning(f"サーバー {guild.name} のボタン設置用チャンネルが見つかりませんでした。")
         else:
-            print(f"サーバー {guild.name} の設定が不完全です。")
+            logging.warning(f"サーバー {guild.name} の設定が不完全です。")
 
 # ボタンチャンネルIDの設定コマンド
 @bot.command()
@@ -130,6 +144,13 @@ async def sn(ctx):
     notify_channel_id = ctx.channel.id  # コマンドが実行されたチャンネルのIDを取得
     await save_notify_channel(bot.db_pool, ctx.guild.id, notify_channel_id)
     await ctx.send(f"通知チャンネルID: {notify_channel_id} を設定しました。")
+
+# ボット終了時にデータベース接続を閉じる
+@bot.event
+async def on_close():
+    if bot.db_pool is not None:
+        await bot.db_pool.close()
+        logging.info("データベース接続を閉じました。")
 
 # ボットを起動
 if __name__ == "__main__":
