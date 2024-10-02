@@ -150,7 +150,7 @@ async def sb(ctx):
 async def sn(ctx):
     notify_channel_id = ctx.channel.id  # コマンドが実行されたチャンネルのIDを取得
     await save_notify_channel(bot.db_pool, ctx.guild.id, notify_channel_id)
-    await ctx.send(f"通知チャンネルID: {notify_channel_id} を設定しました。")
+    await ctx.send(f"通知チャンネルを設定したよ！")
 
 # ボットを起動
 if __name__ == "__main__":
