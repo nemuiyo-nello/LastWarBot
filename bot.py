@@ -53,7 +53,7 @@ class MyView(discord.ui.View):
         if channel is not None:
             user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
             try:
-                message = await channel.send(f"@everyone\n🌟 わーい！掘るちゃむよ～！🌟\n🎉 {user_nick} が教えてくれたよ〜！🎉")
+                message = await channel.send(f"@everyone\n🌟 わーい！掘るちゃむよ～！🌟\n {user_nick} が教えてくれたよっ！🎉")
 
                 # 5分後にメッセージを削除
                 await asyncio.sleep(300)
@@ -81,7 +81,7 @@ class MyView(discord.ui.View):
         if channel is not None:
             user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
             try:
-                message = await channel.send(f"@everyone\n🔔 速報！都市or拠点を占拠中！🔔\n👑 {user_nick} が呼んでるよ〜！👑")
+                message = await channel.send(f"@everyone\n🔔 速報！🔔都市or拠点を占拠中！\n {user_nick} が呼んでるよっ！👑")
 
                 # 10分後にメッセージを削除
                 await asyncio.sleep(600)
@@ -123,7 +123,7 @@ async def on_ready():
                     await message.delete()
                 
                 view = MyView(notify_channel_id)  # 通知チャンネルのIDをビューに渡す
-                await button_channel.send("## 掘るちゃむをお知らせする", view=view)
+                await button_channel.send("## ボタンを押してお知らせする", view=view)
             else:
                 print(f"サーバー {guild.name} のボタン設置用チャンネルが見つかりませんでした。")
         else:
