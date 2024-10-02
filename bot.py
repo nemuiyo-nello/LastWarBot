@@ -2,11 +2,52 @@ import discord
 from discord.ext import commands
 import asyncio
 import os
+import asyncpg
+import logging
+
+# ログの設定
+logging.basicConfig(level=logging.INFO)
 
 # ボットの初期化
 intents = discord.Intents.default()
 intents.message_content = True  # メッセージコンテンツのインテントを有効にする
-bot = commands.Bot(command_prefix="!", intents=intents)
+command_prefix = os.getenv('COMMAND_PREFIX', '!')  # 環境変数からコマンドプレフィックスを取得、デフォルトは'!'
+bot = commands.Bot(command_prefix=command_prefix, intents=intents)
+
+# データベースに接続する関数
+async def init_db():
+    try:
+        pool = await asyncpg.create_pool(dsn=os.getenv('DATABASE_URL'))
+        logging.info("データベース接続成功")
+        return pool
+    except Exception as e:
+        logging.error(f"データベース接続エラー: {e}")
+        return None
+
+# サーバーごとの設定を保存する関数（ボタンチャンネルID）
+async def save_button_channel(pool, guild_id, button_channel_id):
+    async with pool.acquire() as connection:
+        await connection.execute("""
+            INSERT INTO server_config (guild_id, button_channel_id)
+            VALUES ($1, $2)
+            ON CONFLICT (guild_id) DO UPDATE
+            SET button_channel_id = $2
+        """, guild_id, button_channel_id)
+
+# サーバーごとの設定を保存する関数（通知チャンネルID）
+async def save_notify_channel(pool, guild_id, notify_channel_id):
+    async with pool.acquire() as connection:
+        await connection.execute("""
+            INSERT INTO server_config (guild_id, notify_channel_id)
+            VALUES ($1, $2)
+            ON CONFLICT (guild_id) DO UPDATE
+            SET notify_channel_id = $2
+        """, guild_id, notify_channel_id)
+
+# サーバーごとの設定を読み込む関数
+async def load_config(pool, guild_id):
+    async with pool.acquire() as connection:
+        return await connection.fetchrow("SELECT * FROM server_config WHERE guild_id = $1", guild_id)
 
 # ボタンの作成
 class MyView(discord.ui.View):
@@ -17,80 +58,99 @@ class MyView(discord.ui.View):
     # 「🚀 ちゃむる！」ボタン
     @discord.ui.button(label="🚀 ちゃむる！", style=discord.ButtonStyle.success)
     async def chamuru_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # 通知を送るチャンネルIDで指定
         channel = bot.get_channel(self.notify_channel_id)
-
-        # すぐに応答する
         await interaction.response.send_message("メッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
 
         if channel is not None:
-            # サーバーニックネームを取得
             user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
-            
-            # メッセージを送信
-            message = await channel.send(f"@everyone\n掘るちゃむ！\nby {user_nick}")  # ユーザーのニックネームをメッセージに追加
+            message = await channel.send(f"@everyone\n掘るちゃむ！\nby {user_nick}")
 
             # 5分後にメッセージを削除
-            await asyncio.sleep(300)  # 300秒（5分）待機
-            
+            await asyncio.sleep(300)
             try:
-                await message.delete()  # メッセージを削除
+                await message.delete()
             except discord.Forbidden:
                 pass
             except discord.HTTPException as e:
-                pass
+                logging.error(f"メッセージ削除エラー: {e}")
         else:
-            print("指定したチャンネルが見つかりませんでした。")
+            logging.warning("指定したチャンネルが見つかりませんでした。")
 
-    # 新しい「⚔ 占拠中！」ボタン
-    @discord.ui.button(label="⚔ 占拠中！", style=discord.ButtonStyle.primary)  # スタイルを primary に変更
+    # 「⚔ 占拠中！」ボタン
+    @discord.ui.button(label="⚔ 占拠中！", style=discord.ButtonStyle.primary)
     async def senkyo_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # 通知を送るチャンネルIDで指定
         channel = bot.get_channel(self.notify_channel_id)
-
-        # すぐに応答する
         await interaction.response.send_message("占拠中のメッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
 
         if channel is not None:
-            # サーバーニックネームを取得
             user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
-
-            # メッセージを送信
-            message = await channel.send(f"@everyone\n都市or拠点占拠中！\nby {user_nick}")  # ユーザーのニックネームをメッセージに追加
+            message = await channel.send(f"@everyone\n都市or拠点占拠中！\nby {user_nick}")
 
             # 10分後にメッセージを削除
-            await asyncio.sleep(600)  # 600秒（10分）待機
-            
+            await asyncio.sleep(600)
             try:
-                await message.delete()  # メッセージを削除
+                await message.delete()
             except discord.Forbidden:
                 pass
             except discord.HTTPException as e:
-                pass
+                logging.error(f"メッセージ削除エラー: {e}")
         else:
-            print("指定したチャンネルが見つかりませんでした。")
+            logging.warning("指定したチャンネルが見つかりませんでした。")
 
 # ボットが起動したときに自動的にボタンを表示する処理
 @bot.event
 async def on_ready():
-    print(f'Logged in as {bot.user.name}')
+    logging.info(f'Logged in as {bot.user.name}')
+    
+    # データベースに接続
+    bot.db_pool = await init_db()
+    if bot.db_pool is None:
+        logging.error("データベースに接続できませんでした。ボタン表示はスキップします。")
+        return
 
-    # ボタンを設置するチャンネルID
-    button_channel_id = 1290535817563082863  # ボタンを設置したいチャンネルのID
-    # 通知を送るチャンネルID
-    notify_channel_id = 1284553911583113290  # 通知を送りたいチャンネルのID
+    # すべてのギルド（サーバー）ごとにボタンを表示
+    for guild in bot.guilds:
+        config = await load_config(bot.db_pool, guild.id)
 
-    # ボタンを設置するチャンネルを取得
-    button_channel = bot.get_channel(button_channel_id)
-    if button_channel is not None:
-        # 以前のメッセージを削除する
-        async for message in button_channel.history(limit=100):
-            await message.delete()
-        
-        view = MyView(notify_channel_id)  # 通知チャンネルのIDをビューに渡す
-        await button_channel.send("## 掘るちゃむをお知らせする", view=view)
-    else:
-        print("指定したボタン設置用のチャンネルが見つかりませんでした。")
+        if config and config['button_channel_id'] and config['notify_channel_id']:
+            button_channel_id = config['button_channel_id']
+            notify_channel_id = config['notify_channel_id']
+            
+            button_channel = bot.get_channel(button_channel_id)
+            if button_channel is not None:
+                # 以前のメッセージを削除
+                async for message in button_channel.history(limit=100):
+                    await message.delete()
+                
+                view = MyView(notify_channel_id)  # 通知チャンネルのIDをビューに渡す
+                await button_channel.send("## 掘るちゃむをお知らせする", view=view)
+            else:
+                logging.warning(f"サーバー {guild.name} のボタン設置用チャンネルが見つかりませんでした。")
+        else:
+            logging.warning(f"サーバー {guild.name} の設定が不完全です。")
+
+# ボタンチャンネルIDの設定コマンド
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def sb(ctx):
+    button_channel_id = ctx.channel.id  # コマンドが実行されたチャンネルのIDを取得
+    await save_button_channel(bot.db_pool, ctx.guild.id, button_channel_id)
+    await ctx.send(f"ボタンチャンネルID: {button_channel_id} を設定しました。")
+
+# 通知チャンネルIDの設定コマンド
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def sn(ctx):
+    notify_channel_id = ctx.channel.id  # コマンドが実行されたチャンネルのIDを取得
+    await save_notify_channel(bot.db_pool, ctx.guild.id, notify_channel_id)
+    await ctx.send(f"通知チャンネルID: {notify_channel_id} を設定しました。")
+
+# ボット終了時にデータベース接続を閉じる
+@bot.event
+async def on_close():
+    if bot.db_pool is not None:
+        await bot.db_pool.close()
+        logging.info("データベース接続を閉じました。")
 
 # ボットを起動
 if __name__ == "__main__":
