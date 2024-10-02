@@ -141,7 +141,7 @@ async def on_ready():
                     await message.delete()
                 
                 view = MyView(notify_channel_id)  # 通知チャンネルのIDをビューに渡す
-                await button_channel.send("## ボタンを押してお知らせする", view=view)
+                await button_channel.send("## ボタンを押してお知らせするよ！", view=view)
             else:
                 print(f"サーバー {guild.name} のボタン設置用チャンネルが見つかりませんでした。")
         else:
@@ -158,7 +158,7 @@ async def sb(ctx):
     notify_channel_id = await load_config(bot.db_pool, ctx.guild.id)
     if notify_channel_id and notify_channel_id['notify_channel_id']:
         view = MyView(notify_channel_id['notify_channel_id'])
-        await ctx.send("ボタンを設置するよ！", view=view)
+        await ctx.send("## ボタンを押してお知らせするよ！", view=view)
     else:
         await ctx.send(f"通知チャンネルIDが設定されていません。")
 
