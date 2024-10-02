@@ -66,10 +66,7 @@ class MyView(discord.ui.View):
     @discord.ui.button(label="🚀 ちゃむる！", style=discord.ButtonStyle.success)
     async def chamuru_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         channel = bot.get_channel(self.notify_channel_id)
-        
-        # インタラクションがまだ応答されていない場合にメッセージを送信
-        if not interaction.responded:
-            await interaction.response.send_message("メッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
+        await interaction.response.send_message("メッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
 
         if channel is not None:
             user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
@@ -87,22 +84,17 @@ class MyView(discord.ui.View):
                 except discord.HTTPException as e:
                     print(f"メッセージ削除時のエラー: {e}")
             except discord.Forbidden:
-                if not interaction.responded:
-                    await interaction.response.send_message("メッセージを送信する権限がありません。", ephemeral=True)
+                await interaction.response.send_message("メッセージを送信する権限がありません。", ephemeral=True)
             except discord.HTTPException as e:
                 print(f"メッセージ送信時のエラー: {e}")
         else:
-            if not interaction.responded:
-                await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
+            await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
 
     # 「⚔ 占拠中！」ボタン
     @discord.ui.button(label="⚔ 占拠中！", style=discord.ButtonStyle.primary)
     async def senkyo_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         channel = bot.get_channel(self.notify_channel_id)
-        
-        # インタラクションがまだ応答されていない場合にメッセージを送信
-        if not interaction.responded:
-            await interaction.response.send_message("占拠中のメッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
+        await interaction.response.send_message("占拠中のメッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
 
         if channel is not None:
             user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
@@ -120,19 +112,17 @@ class MyView(discord.ui.View):
                 except discord.HTTPException as e:
                     print(f"メッセージ削除時のエラー: {e}")
             except discord.Forbidden:
-                if not interaction.responded:
-                    await interaction.response.send_message("メッセージを送信する権限がありません。", ephemeral=True)
+                await interaction.response.send_message("メッセージを送信する権限がありません。", ephemeral=True)
             except discord.HTTPException as e:
                 print(f"メッセージ送信時のエラー: {e}")
         else:
-            if not interaction.responded:
-                await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
+            await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
 
 # ボットが起動したときに自動的にボタンを表示する処理
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user.name}')
-    
+
     # データベースに接続
     bot.db_pool = await init_db()
 
@@ -143,13 +133,13 @@ async def on_ready():
         if config and config['button_channel_id'] and config['notify_channel_id']:
             button_channel_id = config['button_channel_id']
             notify_channel_id = config['notify_channel_id']
-            
+
             button_channel = bot.get_channel(button_channel_id)
             if button_channel is not None:
                 # 以前のメッセージを削除
                 async for message in button_channel.history(limit=100):
                     await message.delete()
-                
+
                 view = MyView(notify_channel_id)  # 通知チャンネルのIDをビューに渡す
                 await button_channel.send("## ボタンを押してお知らせするよ！", view=view)
             else:
@@ -163,7 +153,7 @@ async def on_ready():
 async def sb(ctx):
     button_channel_id = ctx.channel.id  # コマンドが実行されたチャンネルのIDを取得
     await save_button_channel(bot.db_pool, ctx.guild.id, button_channel_id)
-    
+
     # 即座にボタンを設置
     notify_channel_id = await load_config(bot.db_pool, ctx.guild.id)
     if notify_channel_id and notify_channel_id['notify_channel_id']:
@@ -194,4 +184,7 @@ async def cb(ctx):
     await clear_button_channel(bot.db_pool, ctx.guild.id)
     await ctx.send("ボタンチャンネルIDをクリアしました。")
 
-bot.run('DISCORD_TOKEN')
+# ボットを起動
+if __name__ == "__main__":
+    token = os.getenv('DISCORD_TOKEN')  # 環境変数からボットのトークンを取得
+    bot.run(token)
