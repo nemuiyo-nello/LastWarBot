@@ -6,7 +6,7 @@ import asyncpg
 
 # ボットの初期化
 intents = discord.Intents.default()
-intents.message_content = True
+intents.message_content = True  # メッセージコンテンツのインテントを有効にする
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # データベースに接続する関数
@@ -41,91 +41,132 @@ async def load_config(pool, guild_id):
 # ボタンの作成
 class MyView(discord.ui.View):
     def __init__(self, notify_channel_id):
-        super().__init__(timeout=None)
-        self.notify_channel_id = notify_channel_id
+        super().__init__(timeout=None)  # timeoutをNoneに設定して無効化
+        self.notify_channel_id = notify_channel_id  # 通知を送るチャンネルのIDを保存
 
+    # 「🚀 ちゃむる！」ボタン
     @discord.ui.button(label="🚀 ちゃむる！", style=discord.ButtonStyle.success)
     async def chamuru_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         channel = bot.get_channel(self.notify_channel_id)
         await interaction.response.send_message("メッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
 
-        if channel:
-            user_nick = interaction.user.display_name
+        if channel is not None:
+            user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
             message = await channel.send(f"@everyone\n掘るちゃむ！\nby {user_nick}")
+
+            # 5分後にメッセージを削除
             await asyncio.sleep(300)
             try:
                 await message.delete()
             except discord.Forbidden:
                 pass
-            except discord.HTTPException:
+            except discord.HTTPException as e:
                 pass
+        else:
+            print("指定したチャンネルが見つかりませんでした。")
 
+    # 「⚔ 占拠中！」ボタン
     @discord.ui.button(label="⚔ 占拠中！", style=discord.ButtonStyle.primary)
     async def senkyo_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         channel = bot.get_channel(self.notify_channel_id)
         await interaction.response.send_message("占拠中のメッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
 
-        if channel:
-            user_nick = interaction.user.display_name
+        if channel is not None:
+            user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
             message = await channel.send(f"@everyone\n都市or拠点占拠中！\nby {user_nick}")
+
+            # 10分後にメッセージを削除
             await asyncio.sleep(600)
             try:
                 await message.delete()
             except discord.Forbidden:
                 pass
-            except discord.HTTPException:
+            except discord.HTTPException as e:
                 pass
+        else:
+            print("指定したチャンネルが見つかりませんでした。")
 
 # ボットが起動したときに自動的にボタンを表示する処理
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user.name}')
+    
+    # データベースに接続
     bot.db_pool = await init_db()
 
+    # すべてのギルド（サーバー）ごとにボタンを表示
     for guild in bot.guilds:
         config = await load_config(bot.db_pool, guild.id)
 
         if config and config['button_channel_id'] and config['notify_channel_id']:
-            button_channel = bot.get_channel(config['button_channel_id'])
-            if button_channel:
+            button_channel_id = config['button_channel_id']
+            notify_channel_id = config['notify_channel_id']
+            
+            button_channel = bot.get_channel(button_channel_id)
+            if button_channel is not None:
+                # 以前のメッセージを削除
                 async for message in button_channel.history(limit=100):
                     await message.delete()
-                view = MyView(config['notify_channel_id'])
+                
+                view = MyView(notify_channel_id)  # 通知チャンネルのIDをビューに渡す
                 await button_channel.send("## 掘るちゃむをお知らせする", view=view)
             else:
-                print(f"{guild.name}: ボタンチャンネルが見つかりませんでした。")
+                print(f"サーバー {guild.name} のボタン設置用チャンネルが見つかりませんでした。")
         else:
-            print(f"{guild.name}: 設定が不完全です。")
+            print(f"サーバー {guild.name} の設定が不完全です。")
 
-# ボタンチャンネル設定コマンド
+# ボタンチャンネルIDの設定コマンド（ボタン設置も同時に行う）
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def sb(ctx):
-    await save_button_channel(bot.db_pool, ctx.guild.id, ctx.channel.id)
-    await ctx.send("ボタンチャンネルを設定しました。")
+    button_channel_id = ctx.channel.id  # コマンドが実行されたチャンネルのIDを取得
+    # ボタンチャンネルIDをデータベースに保存
+    await save_button_channel(bot.db_pool, ctx.guild.id, button_channel_id)
+    
+    # 通知チャンネルのIDを取得する
+    config = await load_config(bot.db_pool, ctx.guild.id)
+    if config and config['notify_channel_id']:
+        notify_channel_id = config['notify_channel_id']
 
-# 通知チャンネル設定コマンド
+        button_channel = bot.get_channel(button_channel_id)
+        if button_channel:
+            # 以前のメッセージを削除
+            async for message in button_channel.history(limit=100):
+                await message.delete()
+
+            # ボタンを設置
+            view = MyView(notify_channel_id)
+            await button_channel.send("## 掘るちゃむをお知らせする", view=view)
+            
+            await ctx.send("ボタンチャンネルIDを設定し、ボタンを設置しました。")
+        else:
+            await ctx.send("指定したボタンチャンネルが見つかりませんでした。")
+    else:
+        await ctx.send("通知チャンネルが設定されていないため、ボタンを設置できません。")
+
+# 通知チャンネルIDの設定コマンド
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def sn(ctx):
-    await save_notify_channel(bot.db_pool, ctx.guild.id, ctx.channel.id)
-    await ctx.send("通知チャンネルを設定しました。")
+    notify_channel_id = ctx.channel.id  # コマンドが実行されたチャンネルのIDを取得
+    await save_notify_channel(bot.db_pool, ctx.guild.id, notify_channel_id)
+    await ctx.send(f"通知チャンネルID: {notify_channel_id} を設定しました。")
 
-# 通知チャンネルクリアコマンド
+# 通知チャンネルIDをクリアするコマンド
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def clear_notify(ctx):
+async def cn(ctx):
     await save_notify_channel(bot.db_pool, ctx.guild.id, None)
-    await ctx.send("通知チャンネルをクリアしました。")
+    await ctx.send("通知チャンネルIDがクリアされました。")
 
-# ボタンチャンネルクリアコマンド
+# ボタンチャンネルIDをクリアするコマンド
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def clear_button(ctx):
+async def cb(ctx):
     await save_button_channel(bot.db_pool, ctx.guild.id, None)
-    await ctx.send("ボタンチャンネルをクリアしました。")
+    await ctx.send("ボタンチャンネルIDがクリアされました。")
 
 # ボットを起動
 if __name__ == "__main__":
-    token = os.getenv('DISCORD_TOKEN')
+    token = os.getenv('DISCORD_TOKEN')  # 環境変数からボットのトークンを取得
     bot.run(token)
