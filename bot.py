@@ -194,4 +194,4 @@ async def cb(ctx):
     await clear_button_channel(bot.db_pool, ctx.guild.id)
     await ctx.send("ボタンチャンネルIDをクリアしました。")
 
-bot.run('YOUR_TOKEN')
+bot.run('DISCORD_TOKEN')
