@@ -33,24 +33,6 @@ async def save_notify_channel(pool, guild_id, notify_channel_id):
             SET notify_channel_id = $2
         """, guild_id, notify_channel_id)
 
-# サーバーごとの設定をクリアする関数（ボタンチャンネルID）
-async def clear_button_channel(pool, guild_id):
-    async with pool.acquire() as connection:
-        await connection.execute("""
-            UPDATE server_config
-            SET button_channel_id = NULL
-            WHERE guild_id = $1
-        """, guild_id)
-
-# サーバーごとの設定をクリアする関数（通知チャンネルID）
-async def clear_notify_channel(pool, guild_id):
-    async with pool.acquire() as connection:
-        await connection.execute("""
-            UPDATE server_config
-            SET notify_channel_id = NULL
-            WHERE guild_id = $1
-        """, guild_id)
-
 # サーバーごとの設定を読み込む関数
 async def load_config(pool, guild_id):
     async with pool.acquire() as connection:
@@ -136,9 +118,17 @@ async def on_ready():
 
             button_channel = bot.get_channel(button_channel_id)
             if button_channel is not None:
-                # 以前のメッセージを削除
-                async for message in button_channel.history(limit=100):
-                    await message.delete()
+                # メッセージ削除時の適度な遅延を追加してレートリミット回避
+                async for message in button_channel.history(limit=20):  # 削除するメッセージ数を20に制限
+                    try:
+                        await asyncio.sleep(1)  # 1秒間隔で削除
+                        await message.delete()
+                    except discord.Forbidden:
+                        pass
+                    except discord.NotFound:
+                        pass  # メッセージが既に削除されていた場合、エラーを無視
+                    except discord.HTTPException as e:
+                        print(f"メッセージ削除時のエラー: {e}")
 
                 view = MyView(notify_channel_id)  # 通知チャンネルのIDをビューに渡す
                 await button_channel.send("## ボタンを押してお知らせするよ！", view=view)
@@ -169,20 +159,6 @@ async def sn(ctx):
     notify_channel_id = ctx.channel.id  # コマンドが実行されたチャンネルのIDを取得
     await save_notify_channel(bot.db_pool, ctx.guild.id, notify_channel_id)
     await ctx.send(f"通知チャンネルを設定したよ！")
-
-# 通知チャンネルIDをクリアするコマンド
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def cn(ctx):
-    await clear_notify_channel(bot.db_pool, ctx.guild.id)
-    await ctx.send("通知チャンネルIDをクリアしました。")
-
-# ボタンチャンネルIDをクリアするコマンド
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def cb(ctx):
-    await clear_button_channel(bot.db_pool, ctx.guild.id)
-    await ctx.send("ボタンチャンネルIDをクリアしました。")
 
 # ボットを起動
 if __name__ == "__main__":
