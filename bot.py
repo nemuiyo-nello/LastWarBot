@@ -47,6 +47,20 @@ class MyView(discord.ui.View):
     # 「🚀 ちゃむる！」ボタン
     @discord.ui.button(label="🚀 ちゃむる！", style=discord.ButtonStyle.success)
     async def chamuru_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # ボタン設置用のチャンネルで過去のメッセージを削除
+        button_channel = interaction.channel
+        async for message in button_channel.history(limit=20):
+            try:
+                await message.delete()
+            except discord.Forbidden:
+                pass
+            except discord.NotFound:
+                pass
+
+        # 新しいボタン付きメッセージを送信
+        await button_channel.send("## ボタンを押してお知らせするよ！", view=self)
+
+        # 通知を送るチャンネルを取得
         channel = bot.get_channel(self.notify_channel_id)
         await interaction.response.send_message("メッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
 
@@ -62,9 +76,7 @@ class MyView(discord.ui.View):
                 except discord.Forbidden:
                     pass
                 except discord.NotFound:
-                    pass  # メッセージが既に削除されていた場合、エラーを無視
-                except discord.HTTPException as e:
-                    print(f"メッセージ削除時のエラー: {e}")
+                    pass
             except discord.Forbidden:
                 await interaction.response.send_message("メッセージを送信する権限がありません。", ephemeral=True)
             except discord.HTTPException as e:
@@ -75,6 +87,20 @@ class MyView(discord.ui.View):
     # 「⚔ 占拠中！」ボタン
     @discord.ui.button(label="⚔ 占拠中！", style=discord.ButtonStyle.primary)
     async def senkyo_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # ボタン設置用のチャンネルで過去のメッセージを削除
+        button_channel = interaction.channel
+        async for message in button_channel.history(limit=20):
+            try:
+                await message.delete()
+            except discord.Forbidden:
+                pass
+            except discord.NotFound:
+                pass
+
+        # 新しいボタン付きメッセージを送信
+        await button_channel.send("## ボタンを押してお知らせするよ！", view=self)
+
+        # 通知を送るチャンネルを取得
         channel = bot.get_channel(self.notify_channel_id)
         await interaction.response.send_message("占拠中のメッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
 
@@ -90,9 +116,7 @@ class MyView(discord.ui.View):
                 except discord.Forbidden:
                     pass
                 except discord.NotFound:
-                    pass  # メッセージが既に削除されていた場合、エラーを無視
-                except discord.HTTPException as e:
-                    print(f"メッセージ削除時のエラー: {e}")
+                    pass
             except discord.Forbidden:
                 await interaction.response.send_message("メッセージを送信する権限がありません。", ephemeral=True)
             except discord.HTTPException as e:
@@ -119,16 +143,14 @@ async def on_ready():
             button_channel = bot.get_channel(button_channel_id)
             if button_channel is not None:
                 # メッセージ削除時の適度な遅延を追加してレートリミット回避
-                async for message in button_channel.history(limit=20):  # 削除するメッセージ数を20に制限
+                async for message in button_channel.history(limit=20):
                     try:
                         await asyncio.sleep(1)  # 1秒間隔で削除
                         await message.delete()
                     except discord.Forbidden:
                         pass
                     except discord.NotFound:
-                        pass  # メッセージが既に削除されていた場合、エラーを無視
-                    except discord.HTTPException as e:
-                        print(f"メッセージ削除時のエラー: {e}")
+                        pass
 
                 view = MyView(notify_channel_id)  # 通知チャンネルのIDをビューに渡す
                 await button_channel.send("## ボタンを押してお知らせするよ！", view=view)
