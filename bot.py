@@ -47,20 +47,6 @@ class MyView(discord.ui.View):
     # 「🚀 ちゃむる！」ボタン
     @discord.ui.button(label="🚀 ちゃむる！", style=discord.ButtonStyle.success)
     async def chamuru_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # ボタン設置用のチャンネルで過去のメッセージを削除
-        button_channel = interaction.channel
-        async for message in button_channel.history(limit=20):
-            try:
-                await message.delete()
-            except discord.Forbidden:
-                pass
-            except discord.NotFound:
-                pass
-
-        # 新しいボタン付きメッセージを送信
-        await button_channel.send("## ボタンを押してお知らせするよ！", view=self)
-
-        # 通知を送るチャンネルを取得
         channel = bot.get_channel(self.notify_channel_id)
         await interaction.response.send_message("メッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
 
@@ -76,7 +62,9 @@ class MyView(discord.ui.View):
                 except discord.Forbidden:
                     pass
                 except discord.NotFound:
-                    pass
+                    pass  # メッセージが既に削除されていた場合、エラーを無視
+                except discord.HTTPException as e:
+                    print(f"メッセージ削除時のエラー: {e}")
             except discord.Forbidden:
                 await interaction.response.send_message("メッセージを送信する権限がありません。", ephemeral=True)
             except discord.HTTPException as e:
@@ -87,20 +75,6 @@ class MyView(discord.ui.View):
     # 「⚔ 占拠中！」ボタン
     @discord.ui.button(label="⚔ 占拠中！", style=discord.ButtonStyle.primary)
     async def senkyo_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # ボタン設置用のチャンネルで過去のメッセージを削除
-        button_channel = interaction.channel
-        async for message in button_channel.history(limit=20):
-            try:
-                await message.delete()
-            except discord.Forbidden:
-                pass
-            except discord.NotFound:
-                pass
-
-        # 新しいボタン付きメッセージを送信
-        await button_channel.send("## ボタンを押してお知らせするよ！", view=self)
-
-        # 通知を送るチャンネルを取得
         channel = bot.get_channel(self.notify_channel_id)
         await interaction.response.send_message("占拠中のメッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
 
@@ -116,7 +90,9 @@ class MyView(discord.ui.View):
                 except discord.Forbidden:
                     pass
                 except discord.NotFound:
-                    pass
+                    pass  # メッセージが既に削除されていた場合、エラーを無視
+                except discord.HTTPException as e:
+                    print(f"メッセージ削除時のエラー: {e}")
             except discord.Forbidden:
                 await interaction.response.send_message("メッセージを送信する権限がありません。", ephemeral=True)
             except discord.HTTPException as e:
@@ -143,14 +119,16 @@ async def on_ready():
             button_channel = bot.get_channel(button_channel_id)
             if button_channel is not None:
                 # メッセージ削除時の適度な遅延を追加してレートリミット回避
-                async for message in button_channel.history(limit=20):
+                async for message in button_channel.history(limit=20):  # 削除するメッセージ数を20に制限
                     try:
                         await asyncio.sleep(1)  # 1秒間隔で削除
                         await message.delete()
                     except discord.Forbidden:
                         pass
                     except discord.NotFound:
-                        pass
+                        pass  # メッセージが既に削除されていた場合、エラーを無視
+                    except discord.HTTPException as e:
+                        print(f"メッセージ削除時のエラー: {e}")
 
                 view = MyView(notify_channel_id)  # 通知チャンネルのIDをビューに渡す
                 await button_channel.send("## ボタンを押してお知らせするよ！", view=view)
@@ -166,10 +144,22 @@ async def sb(ctx):
     button_channel_id = ctx.channel.id  # コマンドが実行されたチャンネルのIDを取得
     await save_button_channel(bot.db_pool, ctx.guild.id, button_channel_id)
 
-    # 即座にボタンを設置
-    notify_channel_id = await load_config(bot.db_pool, ctx.guild.id)
-    if notify_channel_id and notify_channel_id['notify_channel_id']:
-        view = MyView(notify_channel_id['notify_channel_id'])
+    # 以前のメッセージを削除する
+    async for message in ctx.channel.history(limit=20):  # 削除するメッセージ数を20に制限
+        try:
+            await asyncio.sleep(1)  # 1秒間隔で削除
+            await message.delete()
+        except discord.Forbidden:
+            pass
+        except discord.NotFound:
+            pass  # メッセージが既に削除されていた場合、エラーを無視
+        except discord.HTTPException as e:
+            print(f"メッセージ削除時のエラー: {e}")
+
+    # 新しいボタンを設置
+    config = await load_config(bot.db_pool, ctx.guild.id)
+    if config and config['notify_channel_id']:
+        view = MyView(config['notify_channel_id'])
         await ctx.send("## ボタンを押してお知らせするよ！", view=view)
     else:
         await ctx.send(f"通知チャンネルIDが設定されていません。")
