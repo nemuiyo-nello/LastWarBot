@@ -16,7 +16,7 @@ async def init_db():
 # サーバーごとの設定を保存する関数（ボタンチャンネルID）
 async def save_button_channel(pool, guild_id, button_channel_id):
     async with pool.acquire() as connection:
-        await connection.execute("""
+        await connection.execute(""" 
             INSERT INTO server_config (guild_id, button_channel_id)
             VALUES ($1, $2)
             ON CONFLICT (guild_id) DO UPDATE
@@ -26,7 +26,7 @@ async def save_button_channel(pool, guild_id, button_channel_id):
 # サーバーごとの設定を保存する関数（通知チャンネルID）
 async def save_notify_channel(pool, guild_id, notify_channel_id):
     async with pool.acquire() as connection:
-        await connection.execute("""
+        await connection.execute(""" 
             INSERT INTO server_config (guild_id, notify_channel_id)
             VALUES ($1, $2)
             ON CONFLICT (guild_id) DO UPDATE
@@ -99,6 +99,23 @@ class MyView(discord.ui.View):
                 print(f"メッセージ送信時のエラー: {e}")
         else:
             await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
+
+# メッセージ一括削除コマンド
+@bot.command()
+@commands.has_permissions(manage_messages=True)  # メッセージ管理の権限が必要
+async def clear(ctx, amount: int):
+    """指定した数のメッセージを削除するコマンド"""
+    if amount <= 0:
+        await ctx.send("削除するメッセージの数は1以上で指定してください。")
+        return
+
+    try:
+        deleted = await ctx.channel.purge(limit=amount)
+        await ctx.send(f"{len(deleted)} 件のメッセージを削除しました。", delete_after=5)  # 5秒後にメッセージを削除
+    except discord.Forbidden:
+        await ctx.send("メッセージを削除する権限がありません。", ephemeral=True)
+    except discord.HTTPException as e:
+        print(f"メッセージ削除時のエラー: {e}")
 
 # ボットが起動したときに自動的にボタンを表示する処理
 @bot.event
