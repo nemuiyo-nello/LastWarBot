@@ -111,11 +111,15 @@ async def clear(ctx, amount: int):
 
     try:
         deleted = await ctx.channel.purge(limit=amount)
-        await ctx.send(f"{len(deleted)} 件のメッセージを削除しました。", delete_after=5)  # 5秒後にメッセージを削除
+        
+        # メッセージ削除後に少し待つ
+        await asyncio.sleep(1)  # 1秒待ってから確認メッセージを送信
+        await ctx.send(f"{len(deleted)} 件のメッセージを削除しちゃったよ！🧹✨️")  # 確認メッセージ
     except discord.Forbidden:
         await ctx.send("メッセージを削除する権限がありません。", ephemeral=True)
     except discord.HTTPException as e:
         print(f"メッセージ削除時のエラー: {e}")
+
 
 # ボットが起動したときに自動的にボタンを表示する処理
 @bot.event
