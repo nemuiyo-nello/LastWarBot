@@ -167,8 +167,10 @@ async def clear(ctx, amount: int):
         await ctx.send(f"メッセージを {len(deleted)} 件削除しちゃった！🧹✨️")  # 確認メッセージ
     except discord.Forbidden:
         await ctx.send("メッセージを削除する権限がありません。")
+        print("権限エラー: メッセージを削除する権限がありません。")
     except discord.NotFound:
         await ctx.send("削除対象のメッセージが見つかりませんでした。")
+        print("エラー: 削除対象のメッセージが見つかりませんでした。")
     except discord.HTTPException as e:
         await ctx.send("メッセージ削除時にエラーが発生しました。")
         print(f"メッセージ削除時のエラー: {e}")
