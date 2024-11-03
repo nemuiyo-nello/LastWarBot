@@ -187,7 +187,7 @@ async def on_message(message):
                     channel = bot.get_channel(notify_channel_id)
                     if channel:
                         try:
-                            await channel.send(f"@everyone\n📢 お知らせちゃんからのお知らせだよっ✨️\n\n{message.content}")
+                            await channel.send(f"###✨️ お知らせちゃんからのお知らせだよっ🍭💕\n{message.content}")
                         except discord.Forbidden:
                             print(f"チャンネル {channel.id} へのメッセージ送信権限がありません。")
                         except discord.HTTPException as e:
