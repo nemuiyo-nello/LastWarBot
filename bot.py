@@ -152,10 +152,15 @@ class MyView(discord.ui.View):
 @bot.command()
 @commands.has_permissions(manage_messages=True)  # メッセージ管理の権限が必要
 async def clear(ctx, amount: int):
+    print(f"clear command invoked with amount: {amount}")  # デバッグ用の出力
     """指定した数のメッセージを削除するコマンド"""
     if amount <= 0:
         await ctx.send("削除するメッセージの数は1以上で指定してください。")
         return
+
+    # 最大削除数の制限（Discord APIの制限に従う）
+    if amount > 100:
+        amount = 100  # 一度に削除できる最大数は100
 
     try:
         deleted = await ctx.channel.purge(limit=amount)
@@ -167,6 +172,7 @@ async def clear(ctx, amount: int):
     except discord.HTTPException as e:
         await ctx.send("メッセージ削除時にエラーが発生しました。")
         print(f"メッセージ削除時のエラー: {e}")
+
 
 # DMメッセージを受信したときの処理
 @bot.event
