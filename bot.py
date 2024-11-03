@@ -82,6 +82,37 @@ class MyView(discord.ui.View):
         else:
             await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
 
+# サブチャンネル通知ボタン
+@discord.ui.button(label="🎉 夜ちゃむ！", style=discord.ButtonStyle.secondary)
+async def sub_notify_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+    # サブチャンネルIDを取得
+    config = await load_config(bot.db_pool, interaction.guild_id)
+    if config and config['sub_channel_id']:
+        sub_channel = bot.get_channel(config['sub_channel_id'])
+        if sub_channel is not None:
+            user_nick = interaction.user.display_name
+            try:
+                message = await sub_channel.send(f"@everyone\n🔔 深夜🌝の掘るちゃむ～！\n {user_nick} が教えてくれたよっ！🎉")
+
+                # 5分後にメッセージを削除
+                await asyncio.sleep(300)
+                try:
+                    await message.delete()
+                except discord.Forbidden:
+                    pass
+                except discord.NotFound:
+                    pass
+                except discord.HTTPException as e:
+                    print(f"メッセージ削除時のエラー: {e}")
+            except discord.Forbidden:
+                await interaction.response.send_message("メッセージを送信する権限がありません。", ephemeral=True)
+            except discord.HTTPException as e:
+                print(f"メッセージ送信時のエラー: {e}")
+        else:
+            await interaction.response.send_message("指定したサブチャンネルが見つかりませんでした。", ephemeral=True)
+    else:
+        await interaction.response.send_message("サブチャンネルが設定されていません。", ephemeral=True)
+
     # 「⚔ 占拠中！」ボタン
     @discord.ui.button(label="⚔ 占拠中！", style=discord.ButtonStyle.primary)
     async def senkyo_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -110,35 +141,6 @@ class MyView(discord.ui.View):
         else:
             await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
 
-    # サブチャンネル通知ボタン
-    @discord.ui.button(label="🎉 夜ちゃむ！", style=discord.ButtonStyle.secondary)
-    async def sub_notify_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
-        config = await load_config(bot.db_pool, interaction.guild_id)
-        if config and config['sub_channel_id']:
-            sub_channel = bot.get_channel(config['sub_channel_id'])
-            if sub_channel is not None:
-                user_nick = interaction.user.display_name
-                try:
-                    message = await sub_channel.send(f"@here\n🔔 深夜🌙の掘るちゃむ！\n {user_nick} が教えてくれたよっ！🎉")
-
-                    # 5分後にメッセージを削除
-                    await asyncio.sleep(300)
-                    try:
-                        await message.delete()
-                    except discord.Forbidden:
-                        pass
-                    except discord.NotFound:
-                        pass  # メッセージが既に削除されていた場合、エラーを無視
-                    except discord.HTTPException as e:
-                        print(f"メッセージ削除時のエラー: {e}")
-                except discord.Forbidden:
-                    await interaction.response.send_message("メッセージを送信する権限がありません。", ephemeral=True)
-                except discord.HTTPException as e:
-                    print(f"メッセージ送信時のエラー: {e}")
-            else:
-                await interaction.response.send_message("指定したサブチャンネルが見つかりませんでした。", ephemeral=True)
-        else:
-            await interaction.response.send_message("サブチャンネルが設定されていません。", ephemeral=True)
 
 # メッセージ一括削除コマンド
 @bot.command()
@@ -156,6 +158,7 @@ async def clear(ctx, amount: int):
         await ctx.send("メッセージを削除する権限がありません。", ephemeral=True)
     except discord.HTTPException as e:
         print(f"メッセージ削除時のエラー: {e}")
+
 
 # ボットが起動したときに自動的にボタンを表示する処理
 @bot.event
@@ -176,36 +179,69 @@ async def on_ready():
 
             button_channel = bot.get_channel(button_channel_id)
             if button_channel is not None:
-                view = MyView(notify_channel_id)
+                # メッセージ削除時の適度な遅延を追加してレートリミット回避
+                async for message in button_channel.history(limit=20):  # 削除するメッセージ数を20に制限
+                    try:
+                        await asyncio.sleep(1)  # 1秒間隔で削除
+                        await message.delete()
+                    except discord.Forbidden:
+                        pass
+                    except discord.NotFound:
+                        pass  # メッセージが既に削除されていた場合、エラーを無視
+                    except discord.HTTPException as e:
+                        print(f"メッセージ削除時のエラー: {e}")
+
+                view = MyView(notify_channel_id)  # 通知チャンネルのIDをビューに渡す
                 await button_channel.send("## ボタンを押してお知らせするよ！", view=view)
             else:
                 print(f"サーバー {guild.name} のボタン設置用チャンネルが見つかりませんでした。")
         else:
             print(f"サーバー {guild.name} の設定が不完全です。")
 
-# コマンド - ボタン設置チャンネルを設定
+# ボタンチャンネルIDの設定コマンド
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def bt(ctx):
-    button_channel_id = ctx.channel.id
+async def sb(ctx):
+    button_channel_id = ctx.channel.id  # コマンドが実行されたチャンネルのIDを取得
     await save_button_channel(bot.db_pool, ctx.guild.id, button_channel_id)
-    await ctx.send("ボタン設置チャンネルを設定したよ！")
 
-# コマンド - 通知チャンネルを設定
+    # 以前のメッセージを削除する
+    async for message in ctx.channel.history(limit=20):  # 削除するメッセージ数を20に制限
+        try:
+            await asyncio.sleep(1)  # 1秒間隔で削除
+            await message.delete()
+        except discord.Forbidden:
+            pass
+        except discord.NotFound:
+            pass  # メッセージが既に削除されていた場合、エラーを無視
+        except discord.HTTPException as e:
+            print(f"メッセージ削除時のエラー: {e}")
+
+    # 新しいボタンを設置
+    config = await load_config(bot.db_pool, ctx.guild.id)
+    if config and config['notify_channel_id']:
+        view = MyView(config['notify_channel_id'])
+        await ctx.send("## ボタンを押してお知らせするよ！", view=view)
+    else:
+        await ctx.send(f"通知チャンネルIDが設定されていません。")
+
+# 通知チャンネルIDの設定コマンド
 @bot.command()
 @commands.has_permissions(administrator=True)
-async def nt(ctx):
-    notify_channel_id = ctx.channel.id
+async def sn(ctx):
+    notify_channel_id = ctx.channel.id  # コマンドが実行されたチャンネルのIDを取得
     await save_notify_channel(bot.db_pool, ctx.guild.id, notify_channel_id)
-    await ctx.send("通知チャンネルを設定したよ！")
+    await ctx.send(f"通知チャンネルを設定したよ！")
 
-# コマンド - サブチャンネルを設定
+# サブチャンネルIDの設定コマンド
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def ss(ctx):
-    sub_channel_id = ctx.channel.id
+    sub_channel_id = ctx.channel.id  # コマンドが実行されたチャンネルのIDを取得
     await save_sub_channel(bot.db_pool, ctx.guild.id, sub_channel_id)
     await ctx.send("サブチャンネルを設定したよ！")
 
-# Botの起動
-bot.run(os.getenv('DISCORD_TOKEN'))
+# ボットを起動
+if __name__ == "__main__":
+    token = os.getenv('DISCORD_TOKEN')  # 環境変数からボットのトークンを取得
+    bot.run(token)
