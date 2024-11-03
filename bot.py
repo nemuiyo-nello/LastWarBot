@@ -12,7 +12,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # 追加部分：メッセージ一括削除コマンド
 @bot.command()
 @commands.has_permissions(manage_messages=True)  # メッセージ管理の権限が必要
-async def clear(ctx, amount: int):
+async def cl(ctx, amount: int):
     """指定した数のメッセージを削除するコマンド"""
     if amount <= 0:
         await ctx.send("削除するメッセージの数は1以上で指定してください。")
