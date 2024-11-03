@@ -167,29 +167,6 @@ class MyView(discord.ui.View):
         else:
             await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
 
-
-# メッセージ一括削除コマンド
-@bot.command()
-@commands.has_permissions(manage_messages=True)
-async def clear(ctx, amount: int):
-    """指定した数のメッセージを削除するコマンド"""
-    if amount <= 0:
-        await ctx.send("削除するメッセージの数は1以上で指定してください❣️")
-        return
-    elif amount > 100:
-        await ctx.send("一度に削除できるメッセージは最大100件までです❣️")
-        return
-
-    try:
-        deleted = await ctx.channel.purge(limit=amount)
-        await ctx.send(f"メッセージを {len(deleted)} 件削除しちゃったっ🧹✨️", delete_after=10)
-    except discord.Forbidden:
-        await ctx.send("メッセージを削除する権限がありません❣️")
-    except discord.HTTPException as e:
-        await ctx.send("メッセージの削除中にエラーが発生しました❣️")
-        print(f"メッセージ削除時のエラー: {e}")
-
-
 # DMメッセージを受信したときの処理
 @bot.event
 async def on_message(message):
