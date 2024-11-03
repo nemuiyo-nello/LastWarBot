@@ -96,7 +96,7 @@ class MyView(discord.ui.View):
             if sub_channel is not None:
                 user_nick = interaction.user.display_name
                 try:
-                    message = await sub_channel.send(f"@everyone\n🔔 深夜🌝の掘るちゃむ～！\n {user_nick} が教えてくれたよっ！🎉")
+                    message = await sub_channel.send(f"@everyone\n📢 深夜🌝の呼び出し～！📢\n {user_nick} が呼んでるよっ❣️")
 
                     # 5分後にメッセージを削除
                     await asyncio.sleep(300)
