@@ -9,6 +9,26 @@ intents = discord.Intents.default()
 intents.message_content = True  # メッセージコンテンツのインテントを有効にする
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+# 追加部分：メッセージ一括削除コマンド
+@bot.command()
+@commands.has_permissions(manage_messages=True)  # メッセージ管理の権限が必要
+async def clear(ctx, amount: int):
+    """指定した数のメッセージを削除するコマンド"""
+    if amount <= 0:
+        await ctx.send("削除するメッセージの数は1以上で指定してください。")
+        return
+
+    try:
+        deleted = await ctx.channel.purge(limit=amount)
+        
+        # メッセージ削除後に少し待つ
+        await asyncio.sleep(1)  # 1秒待ってから確認メッセージを送信
+        await ctx.send(f"{len(deleted)} 件のメッセージを削除しちゃったよ！🧹✨️")  # 確認メッセージ
+    except discord.Forbidden:
+        await ctx.send("メッセージを削除する権限がありません。", ephemeral=True)
+    except discord.HTTPException as e:
+        print(f"メッセージ削除時のエラー: {e}")
+
 # データベースに接続する関数
 async def init_db():
     try:
