@@ -161,8 +161,11 @@ async def clear(ctx, amount: int):
         deleted = await ctx.channel.purge(limit=amount)
         await ctx.send(f"メッセージを {len(deleted)} 件削除しちゃった！🧹✨️")  # 確認メッセージ
     except discord.Forbidden:
-        await ctx.send("メッセージを削除する権限がありません。", ephemeral=True)
+        await ctx.send("メッセージを削除する権限がありません。")
+    except discord.NotFound:
+        await ctx.send("削除対象のメッセージが見つかりませんでした。")
     except discord.HTTPException as e:
+        await ctx.send("メッセージ削除時にエラーが発生しました。")
         print(f"メッセージ削除時のエラー: {e}")
 
 # DMメッセージを受信したときの処理
