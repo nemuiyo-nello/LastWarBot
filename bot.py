@@ -165,6 +165,38 @@ async def clear(ctx, amount: int):
     except discord.HTTPException as e:
         print(f"メッセージ削除時のエラー: {e}")
 
+# DMメッセージを受信したときの処理
+@bot.event
+async def on_message(message):
+    # ボット自身のメッセージは無視
+    if message.author == bot.user:
+        return
+
+    # DMメッセージであることを確認
+    if isinstance(message.channel, discord.DMChannel):
+        # 管理者ユーザーのIDを指定（あなたのIDをここに入力してください）
+        admin_user_id = 232828473591332865  # あなたのDiscordユーザーIDを設定
+
+        if message.author.id == admin_user_id:
+            # 全サーバーの設定を取得し、通知チャンネルにメッセージを送信
+            for guild in bot.guilds:
+                config = await load_config(bot.db_pool, guild.id)
+
+                if config and config['notify_channel_id']:
+                    notify_channel_id = config['notify_channel_id']
+                    channel = bot.get_channel(notify_channel_id)
+                    if channel:
+                        try:
+                            await channel.send(f"メッセージが管理者から送信されました:\n{message.content}")
+                        except discord.Forbidden:
+                            print(f"チャンネル {channel.id} へのメッセージ送信権限がありません。")
+                        except discord.HTTPException as e:
+                            print(f"メッセージ送信時のエラー: {e}")
+
+            # 管理者に確認メッセージを返信
+            await message.channel.send("メッセージをすべての通知チャンネルに送信しました！")
+
+
 
 # ボットが起動したときに自動的にボタンを表示する処理
 @bot.event
