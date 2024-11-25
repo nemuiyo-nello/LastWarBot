@@ -107,7 +107,7 @@ class MyView(discord.ui.View):
             await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
 
     # サブチャンネル通知ボタン
-    @discord.ui.button(label="🎉 夜ちゃむ！", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="🎉 サブちゃむ！", style=discord.ButtonStyle.secondary)
     async def sub_notify_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         # サブチャンネルIDを取得
         config = await load_config(bot.db_pool, interaction.guild.id)
@@ -116,7 +116,7 @@ class MyView(discord.ui.View):
             if sub_channel is not None:
                 user_nick = interaction.user.display_name
                 try:
-                    message = await sub_channel.send(f"@everyone\n📢 深夜🌝の呼び出し～！📢\n {user_nick} が呼んでるよっ❣️")
+                    message = await sub_channel.send(f"@everyone\n📢 みんな集まれ～！📢\n {user_nick} が呼んでるよっ❣️")
 
                     # 5分後にメッセージを削除
                     await asyncio.sleep(300)
