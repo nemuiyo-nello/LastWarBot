@@ -177,7 +177,7 @@ class MyView(discord.ui.View):
         if channel is not None:
             user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
             try:
-                message = await channel.send(f"@everyone\n🔔 占拠中！🔔 拠点or都市占拠中だよ！⚔️ {user_nick} が呼んでるよっ！👑")
+                message = await channel.send(f"@everyone\n🔔 占拠中！🔔 拠点or都市占拠中だよ！ {user_nick} が呼んでるよっ！⚔️")
 
                 # 10分後にメッセージを削除
                 await asyncio.sleep(600)
