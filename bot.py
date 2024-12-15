@@ -137,10 +137,8 @@ class MyView(discord.ui.View):
         else:
             await interaction.response.send_message("サブチャンネルが設定されていません。", ephemeral=True)
 
-
-
-    # 「⚒️ 🐼召喚！」ボタン
-    @discord.ui.button(label="⚒️ 🐼召喚！", style=discord.ButtonStyle.primary)
+        # 「⚒️ 🐼召喚！⚒️」ボタン
+    @discord.ui.button(label="⚒️ 🐼召喚！⚒️", style=discord.ButtonStyle.primary)
     async def senkyo_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         channel = bot.get_channel(self.notify_channel_id)
         await interaction.response.send_message("🐼呼び出しのメッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
@@ -149,7 +147,7 @@ class MyView(discord.ui.View):
             user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
             user_id = 1261958168007802913  # メンション対象のユーザーID
             try:
-                message = await channel.send(f"<@{user_id}>\n⚒️ 採掘場出現！⚒️チタンor石炭採掘場が出たよ～！\n {user_nick} が呼んでるよっ！👑")
+                message = await channel.send(f"<@{user_id}>\n⚒️ 採掘場出現！⚒️ チタンor石炭採掘場が出たよ～！ {user_nick} が呼んでるよっ！🐼")
 
                 # 10分後にメッセージを削除
                 await asyncio.sleep(600)
@@ -167,6 +165,37 @@ class MyView(discord.ui.View):
                 print(f"メッセージ送信時のエラー: {e}")
         else:
             await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
+
+
+
+        # 「⚔️ 占拠中！」ボタン
+        @discord.ui.button(label="⚔️ 占拠中！", style=discord.ButtonStyle.danger)
+        async def senkyo_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+            channel = bot.get_channel(self.notify_channel_id)
+            await interaction.response.send_message("占拠中！⚔️のメッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
+    
+            if channel is not None:
+                user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
+                try:
+                    message = await channel.send(f"@everyone\n🔔 占拠中！🔔 拠点or都市占拠中だよ！⚔️ {user_nick} が呼んでるよっ！👑")
+    
+                    # 10分後にメッセージを削除
+                    await asyncio.sleep(600)
+                    try:
+                        await message.delete()
+                    except discord.Forbidden:
+                        pass
+                    except discord.NotFound:
+                        pass  # メッセージが既に削除されていた場合、エラーを無視
+                    except discord.HTTPException as e:
+                        print(f"メッセージ削除時のエラー: {e}")
+                except discord.Forbidden:
+                    await interaction.response.send_message("メッセージを送信する権限がありません。", ephemeral=True)
+                except discord.HTTPException as e:
+                    print(f"メッセージ送信時のエラー: {e}")
+            else:
+                await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
+                
 
 # DMメッセージを受信したときの処理
 @bot.event
