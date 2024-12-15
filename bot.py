@@ -66,11 +66,28 @@ async def save_sub_channel(pool, guild_id, sub_channel_id):
             ON CONFLICT (guild_id) DO UPDATE
             SET sub_channel_id = $2
         """, guild_id, sub_channel_id)
-
+   
 # サーバーごとの設定を読み込む関数
 async def load_config(pool, guild_id):
     async with pool.acquire() as connection:
         return await connection.fetchrow("SELECT * FROM server_config WHERE guild_id = $1", guild_id)
+
+
+# サーバーごとの設定を保存する関数（召喚するユーザーID）
+async def save_mention_user(pool, guild_id, mention_user_id):
+    async with pool.acquire() as connection:
+        await connection.execute("""
+            INSERT INTO server_config (guild_id, mention_user_id)
+            VALUES ($1, $2)
+            ON CONFLICT (guild_id) DO UPDATE
+            SET mention_user_id = $2
+        """, guild_id, mention_user_id)    
+
+# サーバーごとの mention_user_id を取得
+async def get_mention_user(pool, guild_id):
+    async with pool.acquire() as connection:
+        row = await connection.fetchrow("SELECT mention_user_id FROM server_config WHERE guild_id = $1", guild_id)
+        return row['mention_user_id'] if row else None    
 
 # ボタンの作成
 class MyView(discord.ui.View):
@@ -145,27 +162,33 @@ class MyView(discord.ui.View):
 
         if channel is not None:
             user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
-            user_id = 1261958168007802913  # メンション対象のユーザーID
-            try:
-                message = await channel.send(f"<@{user_id}>\n⚒️ 採掘場出現！⚒️ チタンor石炭採掘場が出たよ～！ {user_nick} が呼んでるよっ！🐼")
+            # サーバーごとの mention_user_id を取得
+            mention_user_id = await get_mention_user(bot.db_pool, interaction.guild.id)
 
-                # 10分後にメッセージを削除
-                await asyncio.sleep(600)
+            if mention_user_id:
                 try:
-                    await message.delete()
+                    message = await channel.send(
+                        f"<@{mention_user_id}>\n⚒️ 採掘場出現！⚒️ チタンor石炭採掘場が出たよ～！ {user_nick} が呼んでるよっ！🐼"
+                    )
+
+                    # 10分後にメッセージを削除
+                    await asyncio.sleep(600)
+                    try:
+                        await message.delete()
+                    except discord.Forbidden:
+                        pass
+                    except discord.NotFound:
+                        pass  # メッセージが既に削除されていた場合、エラーを無視
+                    except discord.HTTPException as e:
+                        print(f"メッセージ削除時のエラー: {e}")
                 except discord.Forbidden:
-                    pass
-                except discord.NotFound:
-                    pass  # メッセージが既に削除されていた場合、エラーを無視
+                    await interaction.response.send_message("メッセージを送信する権限がありません。", ephemeral=True)
                 except discord.HTTPException as e:
-                    print(f"メッセージ削除時のエラー: {e}")
-            except discord.Forbidden:
-                await interaction.response.send_message("メッセージを送信する権限がありません。", ephemeral=True)
-            except discord.HTTPException as e:
-                print(f"メッセージ送信時のエラー: {e}")
+                    print(f"メッセージ送信時のエラー: {e}")
+            else:
+                await interaction.response.send_message("召喚するユーザーが設定されていません。管理者に確認してください。", ephemeral=True)
         else:
             await interaction.response.send_message("指定したチャンネルが見つかりませんでした。", ephemeral=True)
-
 
 
     # 「⚔️ 占拠中！」ボタン
@@ -312,6 +335,14 @@ async def ss(ctx):
     sub_channel_id = ctx.channel.id  # コマンドが実行されたチャンネルのIDを取得
     await save_sub_channel(bot.db_pool, ctx.guild.id, sub_channel_id)
     await ctx.send("サブチャンネルを設定したよ！")
+
+# 召喚するユーザーIDの設定コマンド
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def sm(ctx, mention_user: discord.Member):
+    mention_user_id = mention_user.id
+    await save_mention_user(bot.db_pool, ctx.guild.id, mention_user_id)
+    await ctx.send(f"召喚対象ユーザーを {mention_user.display_name} さんに設定したよ！")
 
 # ボットを起動
 if __name__ == "__main__":
