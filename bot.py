@@ -140,7 +140,7 @@ class MyView(discord.ui.View):
 
 
     # 「⛏ 🐼召喚！」ボタン
-    @discord.ui.button(label=⛏ 🐼召喚！", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="⛏ 🐼召喚！", style=discord.ButtonStyle.primary)
     async def senkyo_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         channel = bot.get_channel(self.notify_channel_id)
         await interaction.response.send_message("🐼呼び出しのメッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
