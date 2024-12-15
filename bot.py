@@ -139,16 +139,17 @@ class MyView(discord.ui.View):
 
 
 
-    # 「⛏ 🐼召喚！」ボタン
-    @discord.ui.button(label="⛏ 🐼召喚！", style=discord.ButtonStyle.primary)
+    # 「⚒️ 🐼召喚！」ボタン
+    @discord.ui.button(label="⚒️ 🐼召喚！", style=discord.ButtonStyle.primary)
     async def senkyo_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         channel = bot.get_channel(self.notify_channel_id)
         await interaction.response.send_message("🐼呼び出しのメッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
 
         if channel is not None:
             user_nick = interaction.user.display_name  # サーバーニックネームまたは表示名を取得
+            user_id = 1261958168007802913  # メンション対象のユーザーID
             try:
-                message = await channel.send(f"@pantax_pty\n⛏ 採掘場出現！⛏チタンor石炭採掘場が出たよ～！\n {user_nick} が呼んでるよっ！👑")
+                message = await channel.send(f"<@{user_id}>\n⚒️ 採掘場出現！⚒️チタンor石炭採掘場が出たよ～！\n {user_nick} が呼んでるよっ！👑")
 
                 # 10分後にメッセージを削除
                 await asyncio.sleep(600)
