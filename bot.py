@@ -154,8 +154,8 @@ class MyView(discord.ui.View):
         else:
             await interaction.response.send_message("サブチャンネルが設定されていません。", ephemeral=True)
 
-    # 「⚒️ 🐼召喚！」ボタン
-    @discord.ui.button(label="⚒️ 🐼召喚！", style=discord.ButtonStyle.primary)
+    # 「🐼召喚！」ボタン
+    @discord.ui.button(label="🐼 召喚！", style=discord.ButtonStyle.primary)
     async def summon_panda_button_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
         channel = bot.get_channel(self.notify_channel_id)
         await interaction.response.send_message("🐼呼び出しのメッセージをお知らせチャンネルに送信するよっ！", ephemeral=True)
@@ -168,7 +168,7 @@ class MyView(discord.ui.View):
             if mention_user_id:
                 try:
                     message = await channel.send(
-                        f"ｵｰｲ(*｣´□`)｣ <@{mention_user_id}>～！\n{user_nick} が呼んでるよっ！🐼"
+                        f"ｵｰｲ！(*｣´□`)｣ <@{mention_user_id}>～！\n{user_nick} が呼んでるよっ！🐼"
                     )
 
                     # 10分後にメッセージを削除
