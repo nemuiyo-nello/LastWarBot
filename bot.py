@@ -168,7 +168,7 @@ class MyView(discord.ui.View):
             if mention_user_id:
                 try:
                     message = await channel.send(
-                        f"<@{mention_user_id}>\n⚒️ 採掘場出現！⚒️ チタンor石炭採掘場が出たよ～！ {user_nick} が呼んでるよっ！🐼"
+                        f"ｵｰｲ(*｣´□`)｣ <@{mention_user_id}>～！\n{user_nick} が呼んでるよっ！🐼"
                     )
 
                     # 10分後にメッセージを削除
